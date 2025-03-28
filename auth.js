@@ -5,6 +5,11 @@ const LOCKOUT_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
 let isLocked = false;
 let lockoutTimer = null;
 
+function logout() {
+    // Clear any session-related data if needed
+    // Note: We don't clear the adminPassword from localStorage as that's permanent
+    window.location.href = "login.html";
+}
 // ======================
 // CORE AUTHENTICATION
 // ======================
@@ -231,4 +236,4 @@ window.checkPassword = checkPassword;
 window.setPassword = setPassword;
 window.changePassword = changePassword;
 window.togglePasswordVisibility = togglePasswordVisibility;
-
+window.logout = logout;
