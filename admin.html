@@ -5,24 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Expense Tracker Admin</title>
     <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
   </head>
   <body>
-    <!-- Login Screen (initially visible) -->
-    <div id="login-container" class="login-container">
-      <div class="login-box slide-in">
-        <h1>Expense Tracker</h1>
-        <div class="form-group">
-          <input
-            type="password"
-            id="password"
-            placeholder="Enter your password"
-            required
-          />
-          <div id="login-error" class="error-message"></div>
-        </div>
-        <button class="btn primary-btn" onclick="checkPassword()">Login</button>
-      </div>
-    </div>
 
     <!-- Admin Portal (hidden until login) -->
     <div id="admin-portal" class="admin-portal container">
@@ -108,6 +94,14 @@
             </div>
           </div>
         </div>
+        <div class="form-row">
+          <div class="form-col">
+              <div class="form-group">
+                  <label>Payment Mode</label>
+                  <input type="text" id="payment-mode" class="form-control" placeholder="Cash, UPI, Bank Transfer etc.">
+              </div>
+          </div>
+      </div>
         <div class="form-group">
           <label>Description</label>
           <input
@@ -157,26 +151,13 @@
       <!-- Transactions Table -->
       <div class="card">
         <h2 class="card-title">Transaction History</h2>
-        <div class="table-controls">
-          <div class="entries-info">
-            Showing <span id="entries-count">0</span> entries
-          </div>
-          <div id="pdfModal" class="modal">
-            <div class="modal-content">
-              <span class="close">&times;</span>
-              <h3>Select Month to Export</h3>
-              <input type="month" id="export-month" min="2023-01" />
-              <button onclick="generatePDF()" class="btn primary-btn">
-                Generate PDF
-              </button>
-            </div>
-        </div>
         <div class="table-responsive">
-          <table id="expense-table">
+          <table id="expense-table" class="styled-table">
             <thead>
               <tr>
                 <th>Date</th>
                 <th>Type</th>
+                <th>Payment Mode</th>
                 <th>Category</th>
                 <th>Description</th>
                 <th>Amount (₹)</th>
@@ -185,9 +166,24 @@
               </tr>
             </thead>
             <tbody>
+              <!-- Data will appear here -->
+            </tbody>
+          </table>
+        </div>
+            <tbody>
               <!-- Will be populated by JavaScript -->
             </tbody>
           </table>
+        </div>
+        <div class="table-controls">
+          <div id="pdfModal" class="modal">
+            <div class="modal-content">
+              <h3>Select Month to Export</h3>
+              <input type="month" id="export-month" min="2023-01" />
+              <button onclick="generatePDF()" class="btn primary-btn" style="margin: 0;">
+                <i class="fas fa-file-pdf"></i> Generate PDF
+              </button>
+            </div>
         </div>
       </div>
     </div>
