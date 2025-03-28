@@ -1,138 +1,234 @@
-// Authentication and Password Management
+// auth.js - Secure Authentication System
 let loginAttempts = 0;
-let isMuted = false;
+const MAX_ATTEMPTS = 3;
+const LOCKOUT_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+let isLocked = false;
+let lockoutTimer = null;
 
-// Check if password is set, redirect if not
-function checkFirstTimeUser() {
-    if (!localStorage.getItem('adminPassword')) {
+// ======================
+// CORE AUTHENTICATION
+// ======================
+
+/**
+ * Initializes security checks when page loads
+ */
+function initializeAuth() {
+    redirectToProperPage();
+    setupEnterKeyLogin();
+    preventPasswordBypass();
+}
+
+/**
+ * Checks password and handles login
+ */
+function checkPassword() {
+    if (isLocked) {
+        showError("System locked. Try again later.");
+        return false;
+    }
+
+    const passwordInput = document.getElementById('password');
+    if (!passwordInput) return false;
+
+    const enteredPassword = passwordInput.value;
+    const storedPassword = localStorage.getItem('adminPassword');
+    const errorElement = document.getElementById('error-msg');
+
+    // Validation checks
+    if (!storedPassword) {
+        window.location.href = "index.html";
+        return false;
+    }
+
+    if (!enteredPassword) {
+        showError("Please enter your password");
+        return false;
+    }
+
+    if (enteredPassword !== storedPassword) {
+        handleFailedAttempt();
+        return false;
+    }
+
+    // Successful login
+    resetSecurityState();
+    window.location.href = "admin.html";
+    return true;
+}
+
+// ======================
+// PASSWORD MANAGEMENT
+// ======================
+
+/**
+ * Sets a new password with validation
+ */
+function setPassword() {
+    const newPass = document.getElementById('new-password').value;
+    const confirmPass = document.getElementById('confirm-password').value;
+    const errorElement = document.getElementById('error-msg');
+
+    // Validation
+    if (!validatePasswordStrength(newPass, errorElement)) return false;
+    if (newPass !== confirmPass) {
+        showError("Passwords don't match!");
+        return false;
+    }
+
+    // Store password
+    localStorage.setItem('adminPassword', newPass);
+    localStorage.setItem('passwordSet', 'true');
+    
+    // Redirect to admin panel
+    window.location.href = "admin.html";
+    return true;
+}
+
+/**
+ * Changes password after verifying current one
+ */
+function changePassword() {
+    const currentPassword = prompt("Enter current password:");
+    if (!currentPassword) return false;
+
+    const storedPassword = localStorage.getItem('adminPassword');
+    if (currentPassword !== storedPassword) {
+        alert("Incorrect current password!");
+        return false;
+    }
+
+    const newPassword = prompt("Enter new password (min 8 chars, 1 uppercase, 1 number):");
+    if (!validatePasswordStrength(newPassword)) {
+        alert("Invalid password! Requirements not met.");
+        return false;
+    }
+
+    const confirmPassword = prompt("Confirm new password:");
+    if (newPassword !== confirmPassword) {
+        alert("Passwords don't match!");
+        return false;
+    }
+
+    localStorage.setItem('adminPassword', newPassword);
+    alert("Password changed successfully!");
+    return true;
+}
+
+// ======================
+// SECURITY UTILITIES
+// ======================
+
+function validatePasswordStrength(password, errorElement = null) {
+    const requirements = [
+        { test: () => password.length >= 8, message: "Password must be at least 8 characters" },
+        { test: () => /[A-Z]/.test(password), message: "Password must contain at least one uppercase letter" },
+        { test: () => /[0-9]/.test(password), message: "Password must contain at least one number" },
+        { test: () => !/\s/.test(password), message: "Password cannot contain spaces" }
+    ];
+
+    for (const req of requirements) {
+        if (!req.test()) {
+            if (errorElement) showError(req.message, errorElement);
+            return false;
+        }
+    }
+    return true;
+}
+
+function handleFailedAttempt() {
+    loginAttempts++;
+    const remainingAttempts = MAX_ATTEMPTS - loginAttempts;
+    
+    if (loginAttempts >= MAX_ATTEMPTS) {
+        lockSystem();
+        showError(`Too many attempts. System locked for ${LOCKOUT_DURATION/60000} minutes.`);
+    } else {
+        showError(`Incorrect password. ${remainingAttempts} attempts remaining.`);
+    }
+}
+
+function lockSystem() {
+    isLocked = true;
+    lockoutTimer = setTimeout(() => {
+        isLocked = false;
+        loginAttempts = 0;
+        clearError();
+    }, LOCKOUT_DURATION);
+}
+
+function resetSecurityState() {
+    loginAttempts = 0;
+    isLocked = false;
+    if (lockoutTimer) {
+        clearTimeout(lockoutTimer);
+        lockoutTimer = null;
+    }
+    clearError();
+}
+
+// ======================
+// UI HELPERS
+// ======================
+
+function showError(message, element = document.getElementById('error-msg')) {
+    if (!element) return;
+    element.textContent = message;
+    element.style.display = 'block';
+}
+
+function clearError(element = document.getElementById('error-msg')) {
+    if (!element) return;
+    element.style.display = 'none';
+}
+
+function togglePasswordVisibility(inputId, iconElement) {
+    const input = document.getElementById(inputId);
+    if (input) {
+        input.type = input.type === 'password' ? 'text' : 'password';
+        iconElement.classList.toggle('fa-eye-slash');
+    }
+}
+
+// ======================
+// PAGE ROUTING
+// ======================
+
+function redirectToProperPage() {
+    const hasPassword = localStorage.getItem('adminPassword');
+    const isSetupPage = window.location.pathname.includes('index.html');
+    const isLoginPage = window.location.pathname.includes('login.html');
+
+    if (!hasPassword && !isSetupPage) {
+        window.location.href = "index.html";
+    } else if (hasPassword && isSetupPage) {
+        window.location.href = "login.html";
+    }
+}
+
+function preventPasswordBypass() {
+    if (!localStorage.getItem('adminPassword') && 
+        window.location.pathname.includes('admin.html')) {
         window.location.href = "index.html";
     }
 }
 
-// Set new password (first-time setup)
-function setPassword() {
-    const newPass = document.getElementById('new-password').value;
-    const confirmPass = document.getElementById('confirm-password').value;
-    const errorElement = document.getElementById('error-message');
-
-    // Validation
-    if (newPass.length < 6) {
-        errorElement.textContent = "Password must be at least 6 characters!";
-        errorElement.style.display = 'block';
-        return;
-    }
-
-    if (newPass !== confirmPass) {
-        errorElement.textContent = "Passwords don't match!";
-        errorElement.style.display = 'block';
-        return;
-    }
-
-    // Store password and redirect
-    localStorage.setItem('adminPassword', newPass);
-    window.location.href = "admin.html";
-}
-
-// Verify login credentials
-function checkPassword() {
-    if (isMuted) {
-        document.getElementById('login-error').textContent = "System locked for 1 hour due to multiple failed attempts";
-        document.getElementById('login-error').style.display = 'block';
-        return;
-    }
-    
-    const enteredPassword = document.getElementById('password').value;
-    const storedPassword = localStorage.getItem('adminPassword');
-    
-    if (enteredPassword === storedPassword) {
-        loginAttempts = 0;
-        showAdminPortal();
-    } else {
-        loginAttempts++;
-        handleFailedLogin();
-    }
-}
-
-// Handle failed login attempts
-function handleFailedLogin() {
-    const errorElement = document.getElementById('login-error');
-    
-    if (loginAttempts >= 3) {
-        isMuted = true;
-        errorElement.textContent = "Too many failed attempts. System locked for 1 hour.";
-        errorElement.style.display = 'block';
-        
-        setTimeout(() => {
-            isMuted = false;
-            loginAttempts = 0;
-            errorElement.style.display = 'none';
-        }, 3600000); // 1 hour
-    } else {
-        errorElement.textContent = `Incorrect password. ${3 - loginAttempts} attempts remaining.`;
-        errorElement.style.display = 'block';
-    }
-}
-
-// Change password function
-function changePassword() {
-    const current = prompt("Enter current password:");
-    const stored = localStorage.getItem('adminPassword');
-    
-    if (current === stored) {
-        const newPass = prompt("Enter new password:");
-        const confirmPass = prompt("Confirm new password:");
-        
-        if (newPass === confirmPass) {
-            if (newPass.length < 6) {
-                alert("Password must be at least 6 characters!");
-                return;
-            }
-            
-            localStorage.setItem('adminPassword', newPass);
-            alert("Password changed successfully!");
-        } else {
-            alert("Passwords don't match!");
-        }
-    } else {
-        alert("Incorrect current password!");
-    }
-}
-
-// Show admin portal after successful login
-function showAdminPortal() {
-    document.getElementById('login-container').style.display = 'none';
-    document.getElementById('admin-portal').style.display = 'block';
-    loadExpenses(); // Load existing expenses
-}
-
-// Logout function
-function logout() {
-    localStorage.removeItem('currentUser');
-    window.location.href = "admin.html";
-}
-
-// Check authentication on admin page load
-if (window.location.pathname.includes('admin.html')) {
-    checkFirstTimeUser();
-}
-
-// Allow form submission with Enter key
-document.addEventListener('DOMContentLoaded', function() {
+function setupEnterKeyLogin() {
     const passwordInput = document.getElementById('password');
     if (passwordInput) {
-        passwordInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                checkPassword();
-            }
+        passwordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') checkPassword();
         });
     }
-    
-    const confirmPassInput = document.getElementById('confirm-password');
-    if (confirmPassInput) {
-        confirmPassInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                setPassword();
-            }
-        });
-    }
-});
+}
+
+// Initialize when page loads
+document.addEventListener('DOMContentLoaded', initializeAuth);
+
+// ======================
+// EXPORT FUNCTIONS FOR HTML
+// ======================
+window.checkPassword = checkPassword;
+window.setPassword = setPassword;
+window.changePassword = changePassword;
+window.togglePasswordVisibility = togglePasswordVisibility;
+
