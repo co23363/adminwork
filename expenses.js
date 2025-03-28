@@ -3,33 +3,48 @@ let expenses = JSON.parse(localStorage.getItem('expenses')) || [];
 
 // Add new expense
 function addExpense() {
+    // Get all input values
     const type = document.getElementById('expense-type').value;
     const category = document.getElementById('expense-category').value;
     const amount = parseFloat(document.getElementById('amount').value);
     const transaction = document.getElementById('transaction-type').value;
     const description = document.getElementById('description').value.trim();
+    const paymentMode = document.getElementById('payment-mode').value.trim() || 'Cash'; // Default to 'Cash'
     const date = new Date().toISOString().split('T')[0];
 
     // Validation
-    if (!description || isNaN(amount) || amount <= 0) {
-        alert("Please enter valid description and amount!");
+    if (!description) {
+        alert("Please enter a description!");
+        document.getElementById('description').focus();
         return;
     }
 
+    if (isNaN(amount) || amount <= 0) {
+        alert("Please enter a valid amount greater than 0!");
+        document.getElementById('amount').focus();
+        return;
+    }
+
+    // Create expense object
     const expense = {
         id: Date.now(),
         type,
         category,
-        amount,
+        amount: parseFloat(amount.toFixed(2)), // Ensure 2 decimal places
         transaction,
         description,
+        paymentMode, // Added payment mode
         date
     };
 
+    // Add to expenses array and update
     expenses.push(expense);
     saveExpenses();
     updateDashboard();
     resetForm();
+    
+    // Optional: Scroll to show new entry
+    document.getElementById('expense-table').scrollIntoView({ behavior: 'smooth' });
 }
 
 // Save expenses to localStorage
@@ -90,39 +105,38 @@ function displaySearchResults(results) {
     table.innerHTML = '';
     
     if (results.length === 0) {
-        table.innerHTML = '<tr><td colspan="7">No transactions found</td></tr>';
+        table.innerHTML = `
+            <tr>
+                <td colspan="8" style="text-align:center; padding: 2rem;">
+                    <i class="fas fa-wallet" style="font-size: 2rem; opacity: 0.3; margin-bottom: 1rem;"></i>
+                    <p>No transactions found</p>
+                </td>
+            </tr>
+        `;
         document.getElementById('entries-count').textContent = '0';
         return;
     }
     
-    const searchTerm = document.getElementById('search-input')?.value.toLowerCase() || '';
-    
     results.forEach(expense => {
         const row = table.insertRow();
         
-        // Highlight search term in description
-        let highlightedDesc = expense.description;
-        if (searchTerm) {
-            highlightedDesc = expense.description.replace(
-                new RegExp(searchTerm, 'gi'),
-                match => `<span class="highlight">${match}</span>`
-            );
-        }
+        // Format amount with color based on type
+        const amountClass = expense.transaction === 'credit' ? 'credit-amount' : 'debit-amount';
+        const amountSign = expense.transaction === 'credit' ? '+' : '-';
         
-        // Format amount with color based on transaction type
-        const amountCell = expense.transaction === 'credit' 
-            ? `<span style="color: var(--success)">+₹${expense.amount.toFixed(2)}</span>`
-            : `<span style="color: var(--danger)">-₹${expense.amount.toFixed(2)}</span>`;
-        
+        // Mobile-friendly data labels
         row.innerHTML = `
-            <td>${expense.date}</td>
-            <td>${expense.type.charAt(0).toUpperCase() + expense.type.slice(1)}</td>
-            <td>${expense.category.charAt(0).toUpperCase() + expense.category.slice(1)}</td>
-            <td>${highlightedDesc}</td>
-            <td>${amountCell}</td>
-            <td>${expense.transaction.charAt(0).toUpperCase() + expense.transaction.slice(1)}</td>
-            <td>
-                <button class="btn secondary-btn" onclick="deleteExpense(${expense.id})">Delete</button>
+            <td data-label="Date">${expense.date}</td>
+            <td data-label="Type">${expense.type.charAt(0).toUpperCase() + expense.type.slice(1)}</td>
+            <td data-label="Payment Mode">${expense.paymentMode || 'Cash'}</td>
+            <td data-label="Category">${expense.category.charAt(0).toUpperCase() + expense.category.slice(1)}</td>
+            <td data-label="Description">${expense.description}</td>
+            <td data-label="Amount" class="${amountClass}">${amountSign}₹${expense.amount.toFixed(2)}</td>
+            <td data-label="Transaction">${expense.transaction.charAt(0).toUpperCase() + expense.transaction.slice(1)}</td>
+            <td data-label="Actions">
+                <button class="delete-btn" onclick="deleteExpense(${expense.id})">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
             </td>
         `;
     });
@@ -254,121 +268,141 @@ function checkMonthReset() {
 // Call this when admin portal loads
 checkMonthReset();
 
-// In expenses.js - Add these functions
 function generatePDF() {
-    const month = document.getElementById('export-month').value;
-    if (!month) {
-        alert('Please select a month');
-        return;
-    }
+    try {
+        // Initialize PDF
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({
+            orientation: 'landscape',
+            unit: 'mm'
+        });
 
-    // Filter expenses for selected month
-    const monthlyExpenses = expenses.filter(exp => exp.date.startsWith(month));
-    
-    if (monthlyExpenses.length === 0) {
-        alert('No transactions found for selected month!');
-        return;
-    }
+        // Get selected month
+        const month = document.getElementById('export-month').value;
+        if (!month) {
+            alert('Please select a month first');
+            return;
+        }
 
-    // Calculate totals
-    const personalExpenses = monthlyExpenses.filter(e => e.type === 'personal');
-    const businessExpenses = monthlyExpenses.filter(e => e.type === 'business');
-    const credited = monthlyExpenses.filter(e => e.transaction === 'credit').reduce((sum, e) => sum + e.amount, 0);
-    const debited = monthlyExpenses.filter(e => e.transaction === 'debit').reduce((sum, e) => sum + e.amount, 0);
-    const balance = credited - debited;
+        // Filter expenses
+        const monthlyExpenses = expenses.filter(exp => exp.date.startsWith(month));
+        if (monthlyExpenses.length === 0) {
+            alert('No transactions found for selected month!');
+            return;
+        }
 
-    // Format date for title
-    const monthNames = ["January", "February", "March", "April", "May", "June",
-                       "July", "August", "September", "October", "November", "December"];
-    const [year, monthNum] = month.split('-');
-    const monthName = monthNames[parseInt(monthNum) - 1];
+        // Format month for title
+        const monthNames = ["January", "February", "March", "April", "May", "June",
+                          "July", "August", "September", "October", "November", "December"];
+        const [year, monthNum] = month.split('-');
+        const formattedMonth = `${monthNames[parseInt(monthNum)-1]} ${year}`;
 
-    // Create PDF
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({
-        orientation: 'landscape',
-        unit: 'mm'
-    });
+        // ======================
+        // PDF CONTENT
+        // ======================
+        
+        // 1. Title Section
+        doc.setFontSize(18);
+        doc.setTextColor(40, 40, 40);
+        doc.text(`Expense Report - ${formattedMonth}`, 105, 15, { align: 'center' });
 
-    // Add header
-    doc.setFontSize(20);
-    doc.setTextColor(40);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`EXPENSE REPORT - ${monthName} ${year}`, 105, 15, { align: 'center' });
+        // 2. Summary Section
+        const totals = {
+            credit: monthlyExpenses.filter(e => e.transaction === 'credit')
+                         .reduce((sum, e) => sum + parseFloat(e.amount), 0),
+            debit: monthlyExpenses.filter(e => e.transaction === 'debit')
+                        .reduce((sum, e) => sum + parseFloat(e.amount), 0)
+        };
+        totals.balance = totals.credit - totals.debit;
 
-    // Add logo (optional)
-    // doc.addImage(logoData, 'PNG', 10, 10, 30, 10);
+        doc.setFontSize(12);
+        doc.text('Summary', 15, 25);
+        doc.setFontSize(10);
+        doc.text(`Total Credit: ₹${totals.credit.toFixed(2)}`, 15, 30);
+        doc.text(`Total Debit: ₹${totals.debit.toFixed(2)}`, 15, 35);
+        doc.text(`Net Balance: ₹${totals.balance.toFixed(2)}`, 15, 40);
 
-    // Add summary section
-    doc.setFontSize(12);
-    doc.setTextColor(100);
-    doc.text('SUMMARY', 15, 25);
-    
-    doc.setFontSize(10);
-    doc.text(`Personal Expenses: ₹${calculateCategoryTotal(personalExpenses).toFixed(2)}`, 15, 30);
-    doc.text(`Business Expenses: ₹${calculateCategoryTotal(businessExpenses).toFixed(2)}`, 15, 35);
-    doc.text(`Total Credited: ₹${credited.toFixed(2)}`, 15, 40);
-    doc.text(`Total Debited: ₹${debited.toFixed(2)}`, 15, 45);
-    doc.text(`Net Balance: ₹${balance.toFixed(2)}`, 15, 50);
-
-    // Add transactions table
-    doc.autoTable({
-        startY: 60,
-        head: [
-            [
-                { content: 'Date', styles: { fillColor: [67, 97, 238], textColor: 255, fontStyle: 'bold' } },
-                { content: 'Type', styles: { fillColor: [67, 97, 238], textColor: 255, fontStyle: 'bold' } },
-                { content: 'Category', styles: { fillColor: [67, 97, 238], textColor: 255, fontStyle: 'bold' } },
-                { content: 'Description', styles: { fillColor: [67, 97, 238], textColor: 255, fontStyle: 'bold' } },
-                { content: 'Amount (₹)', styles: { fillColor: [67, 97, 238], textColor: 255, fontStyle: 'bold' } },
-                { content: 'Transaction', styles: { fillColor: [67, 97, 238], textColor: 255, fontStyle: 'bold' } }
-            ]
-        ],
-        body: monthlyExpenses.map(exp => [
-            exp.date,
-            exp.type.charAt(0).toUpperCase() + exp.type.slice(1),
-            exp.category.charAt(0).toUpperCase() + exp.category.slice(1),
-            exp.description,
-            { content: exp.amount.toFixed(2), styles: { halign: 'right' } },
-            { 
-                content: exp.transaction.charAt(0).toUpperCase() + exp.transaction.slice(1),
-                styles: { 
-                    textColor: exp.transaction === 'credit' ? [40, 167, 69] : [220, 53, 69],
-                    fontStyle: 'bold'
+        // 3. Main Table
+        doc.autoTable({
+            startY: 50,
+            head: [
+                ['Date', 'Type', 'Payment Mode', 'Category', 'Description', 'Amount (₹)', 'Transaction']
+            ],
+            body: monthlyExpenses.map(exp => [
+                exp.date,
+                exp.type.charAt(0).toUpperCase() + exp.type.slice(1),
+                exp.paymentMode || 'Cash',
+                exp.category.charAt(0).toUpperCase() + exp.category.slice(1),
+                exp.description,
+                { 
+                    content: exp.amount.toFixed(2),
+                    styles: { halign: 'right' } 
+                },
+                { 
+                    content: exp.transaction.charAt(0).toUpperCase() + exp.transaction.slice(1),
+                    styles: { 
+                        textColor: exp.transaction === 'credit' ? [40, 167, 69] : [220, 53, 69],
+                        fontStyle: 'bold'
+                    }
                 }
+            ]),
+            styles: {
+                fontSize: 9,
+                cellPadding: 4,
+                valign: 'middle'
+            },
+            headStyles: {
+                fillColor: [67, 97, 238],
+                textColor: 255,
+                fontStyle: 'bold'
+            },
+            columnStyles: {
+                0: { cellWidth: 20 }, // Date
+                1: { cellWidth: 20 }, // Type
+                2: { cellWidth: 25 }, // Payment Mode
+                3: { cellWidth: 25 }, // Category
+                4: { cellWidth: 50 }, // Description
+                5: { cellWidth: 20 }, // Amount
+                6: { cellWidth: 25 }  // Transaction
+            },
+            didDrawPage: function(data) {
+                // Footer
+                doc.setFontSize(8);
+                doc.setTextColor(150);
+                doc.text(`Generated on ${new Date().toLocaleDateString()}`, 
+                    data.settings.margin.left, 
+                    doc.internal.pageSize.height - 10);
+                doc.text(`Page ${data.pageNumber} of ${data.pageCount}`, 
+                    doc.internal.pageSize.width - 20,
+                    doc.internal.pageSize.height - 10,
+                    { align: 'right' });
             }
-        ]),
-        theme: 'grid',
-        headStyles: {
-            fillColor: [67, 97, 238],
-            textColor: 255,
-            fontStyle: 'bold'
-        },
-        alternateRowStyles: {
-            fillColor: [240, 240, 240]
-        },
-        columnStyles: {
-            0: { cellWidth: 20 },
-            1: { cellWidth: 20 },
-            2: { cellWidth: 20 },
-            3: { cellWidth: 40 },
-            4: { cellWidth: 20, halign: 'right' },
-            5: { cellWidth: 20 }
-        },
-        margin: { top: 60 }
-    });
+        });
 
-    // Add footer
-    const pageCount = doc.internal.getNumberOfPages();
-    for(let i = 1; i <= pageCount; i++) {
-        doc.setPage(i);
-        doc.setFontSize(8);
-        doc.setTextColor(150);
-        doc.text(`Page ${i} of ${pageCount}`, 280, 200, { align: 'right' });
-        doc.text(`Generated on ${new Date().toLocaleDateString()}`, 10, 200);
+        // Save and close modal
+        doc.save(`Expense_Report_${formattedMonth.replace(' ', '_')}.pdf`);
+        document.getElementById('pdfModal').style.display = 'none';
+
+    } catch (error) {
+        console.error("PDF Generation Error:", error);
+        alert("Failed to generate PDF. Please check console for details.");
     }
-
-    // Save PDF
-    doc.save(`Expense_Report_${monthName}_${year}.pdf`);
-    document.getElementById('pdfModal').style.display = 'none';
 }
+
+// Modal Control (add this to your DOMContentLoaded event)
+function setupPdfModal() {
+    const modal = document.getElementById('pdfModal');
+    const btn = document.getElementById('pdfTriggerBtn');
+    const span = document.querySelector('.close-pdf-modal');
+
+    btn.onclick = () => modal.style.display = 'block';
+    span.onclick = () => modal.style.display = 'none';
+    
+    window.onclick = (event) => {
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
+    };
+}
+
+document.addEventListener('DOMContentLoaded', setupPdfModal);
