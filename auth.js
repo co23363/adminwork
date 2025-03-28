@@ -8,6 +8,7 @@ let lockoutTimer = null;
 function logout() {
     // Clear any session-related data if needed
     // Note: We don't clear the adminPassword from localStorage as that's permanent
+    sessionStorage.removeItem('isAuthenticated');
     window.location.href = "login.html";
 }
 // ======================
@@ -18,9 +19,32 @@ function logout() {
  * Initializes security checks when page loads
  */
 function initializeAuth() {
-    redirectToProperPage();
+    // Only redirect if we're not already on the correct page
+    const currentPath = window.location.pathname;
+    const targetPath = getProperRedirectPath();
+    
+    if (targetPath && !currentPath.includes(targetPath)) {
+        window.location.href = targetPath;
+        return; // Important to prevent further execution
+    }
+    
     setupEnterKeyLogin();
     preventPasswordBypass();
+}
+
+function getProperRedirectPath() {
+    const hasPassword = localStorage.getItem('adminPassword');
+    const isSetupPage = window.location.pathname.includes('index.html');
+    const isLoginPage = window.location.pathname.includes('login.html');
+    const isAuthenticated = sessionStorage.getItem('isAuthenticated') === 'true';
+
+    if (!hasPassword) {
+        return isSetupPage ? null : 'index.html';
+    } else if (!isAuthenticated) {
+        return isLoginPage ? null : 'login.html';
+    } else {
+        return null; // No redirect needed
+    }
 }
 
 /**
@@ -37,13 +61,6 @@ function checkPassword() {
 
     const enteredPassword = passwordInput.value;
     const storedPassword = localStorage.getItem('adminPassword');
-    const errorElement = document.getElementById('error-msg');
-
-    // Validation checks
-    if (!storedPassword) {
-        window.location.href = "index.html";
-        return false;
-    }
 
     if (!enteredPassword) {
         showError("Please enter your password");
@@ -57,6 +74,7 @@ function checkPassword() {
 
     // Successful login
     resetSecurityState();
+    sessionStorage.setItem('isAuthenticated', 'true');
     window.location.href = "admin.html";
     return true;
 }
@@ -202,11 +220,24 @@ function redirectToProperPage() {
     const hasPassword = localStorage.getItem('adminPassword');
     const isSetupPage = window.location.pathname.includes('index.html');
     const isLoginPage = window.location.pathname.includes('login.html');
+    const isAdminPage = window.location.pathname.includes('admin.html');
 
+    // If no password is set and we're not on the setup page, go to setup
     if (!hasPassword && !isSetupPage) {
         window.location.href = "index.html";
-    } else if (hasPassword && isSetupPage) {
+        return;
+    }
+
+    // If password is set and we're on setup page, go to login
+    if (hasPassword && isSetupPage) {
         window.location.href = "login.html";
+        return;
+    }
+
+    // If we're on admin page without being authenticated, go to login
+    if (isAdminPage && !sessionStorage.getItem('isAuthenticated')) {
+        window.location.href = "login.html";
+        return;
     }
 }
 
