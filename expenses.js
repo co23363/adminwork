@@ -320,12 +320,34 @@ function resetForm() {
     if (descriptionInput) descriptionInput.focus();
 }
 
-// Delete an expense
+// Delete an expense - Updated version
 function deleteExpense(id) {
     if (confirm("Are you sure you want to delete this transaction?")) {
-        expenses = expenses.filter(expense => expense.id !== id);
-        saveExpenses();
-        updateDashboard();
+        // Find the expense index
+        const index = expenses.findIndex(expense => expense.id === id);
+        
+        if (index !== -1) {
+            // Remove the expense from the array
+            expenses.splice(index, 1);
+            
+            // Update localStorage
+            saveExpenses();
+            
+            // Refresh the display
+            updateDashboard();
+            
+            // Re-render the current tab
+            const activeTab = document.querySelector('.tab-content.active-tab');
+            if (activeTab) {
+                const tabId = activeTab.id;
+                updateTabData(tabId);
+            }
+            
+            console.log(`Expense with ID ${id} deleted successfully`);
+        } else {
+            console.error(`Expense with ID ${id} not found`);
+            alert("Transaction not found!");
+        }
     }
 }
 
