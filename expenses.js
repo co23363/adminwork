@@ -1,6 +1,40 @@
+// Expense Tracking System
+let expenses = JSON.parse(localStorage.getItem('expenses')) || [];
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Load expenses first
+    loadExpenses();
+    
+    // Set up event listeners
+    setupExpenseTypeListener();
+    checkMonthReset();
+    setupAddExpenseButton();
+    setupPdfModal();
+    
+    // If in admin portal with tabs
+    if (document.getElementById('admin-portal')) {
+        openTab('all-transactions');
+    }
+});
+
+// Set up Add Expense button
+function setupAddExpenseButton() {
+    const addButton = document.getElementById('add-expense-btn') || 
+                     document.querySelector('.btn.primary-btn[onclick="addExpense()"]');
+    
+    if (addButton) {
+        addButton.addEventListener('click', addExpense);
+        console.log("Add Expense button initialized");
+    } else {
+        console.error("Add Expense button not found!");
+    }
+}
 
 // Add new expense
 function addExpense() {
+    console.log("Add Expense function triggered");
+    
     // Get all input values with null checks
     const typeElement = document.getElementById('expense-type');
     const categoryElement = document.getElementById('expense-category');
@@ -11,7 +45,11 @@ function addExpense() {
     
     if (!typeElement || !categoryElement || !amountElement || 
         !transactionElement || !descriptionElement || !paymentModeElement) {
-        console.error("One or more form elements not found");
+        console.error("Missing form elements:", {
+            typeElement, categoryElement, amountElement,
+            transactionElement, descriptionElement, paymentModeElement
+        });
+        alert("Form error. Please refresh the page.");
         return;
     }
     
@@ -48,7 +86,6 @@ function addExpense() {
         date
     };
 
-    // Debug log
     console.log("Adding new expense:", expense);
 
     // Add to expenses array and update
@@ -57,26 +94,35 @@ function addExpense() {
     updateDashboard();
     resetForm();
     
-    // Optional: Scroll to show new entry
+    // Scroll to show new entry
     const expenseTable = document.getElementById('expense-table');
     if (expenseTable) {
         expenseTable.scrollIntoView({ behavior: 'smooth' });
     }
-    
-    // Debug log
-    console.log("Updated expenses array:", expenses);
 }
 
 // Save expenses to localStorage
 function saveExpenses() {
-    localStorage.setItem('expenses', JSON.stringify(expenses));
+    try {
+        localStorage.setItem('expenses', JSON.stringify(expenses));
+        console.log("Expenses saved successfully");
+    } catch (error) {
+        console.error("Error saving expenses:", error);
+        alert("Error saving data. Please check console for details.");
+    }
 }
 
 // Load expenses on page load
 function loadExpenses() {
-    const storedExpenses = localStorage.getItem('expenses');
-    expenses = storedExpenses ? JSON.parse(storedExpenses) : [];
-    updateDashboard();
+    try {
+        const storedExpenses = localStorage.getItem('expenses');
+        expenses = storedExpenses ? JSON.parse(storedExpenses) : [];
+        console.log("Loaded expenses:", expenses);
+        updateDashboard();
+    } catch (error) {
+        console.error("Error loading expenses:", error);
+        expenses = [];
+    }
 }
 
 // Update dashboard with current data
@@ -118,6 +164,8 @@ function updateElementText(id, text) {
     const element = document.getElementById(id);
     if (element) {
         element.textContent = text;
+    } else {
+        console.warn(`Element with ID '${id}' not found`);
     }
 }
 
@@ -131,10 +179,16 @@ function calculateCategoryTotal(expenses) {
 // Display expenses in table
 function displaySearchResults(results, tableId = 'expense-table') {
     const table = document.getElementById(tableId);
-    if (!table) return;
+    if (!table) {
+        console.error(`Table with ID '${tableId}' not found`);
+        return;
+    }
     
     const tbody = table.getElementsByTagName('tbody')[0];
-    if (!tbody) return;
+    if (!tbody) {
+        console.error("Table body not found");
+        return;
+    }
     
     tbody.innerHTML = '';
     
@@ -275,33 +329,6 @@ function deleteExpense(id) {
     }
 }
 
-// Export to CSV
-function exportToCSV() {
-    const headers = ['Date', 'Type', 'Category', 'Description', 'Amount', 'Transaction'];
-    const data = expenses.map(expense => [
-        expense.date,
-        expense.type,
-        expense.category,
-        expense.description,
-        expense.amount,
-        expense.transaction
-    ]);
-    
-    let csv = headers.join(',') + '\n';
-    data.forEach(row => {
-        csv += row.map(item => `"${item}"`).join(',') + '\n';
-    });
-    
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.setAttribute('hidden', '');
-    a.setAttribute('href', url);
-    a.setAttribute('download', `expenses_${new Date().toISOString().slice(0,10)}.csv`);
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-}
 
 // Expense type change handler
 function setupExpenseTypeListener() {
@@ -639,31 +666,205 @@ function resetLoanForm() {
     if (descInput) descInput.focus();
 }
 
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', function() {
-    // Check which page we're on
-    if (document.getElementById('expense-table')) {
-        // Original expense tracker page
-        loadExpenses();
-        setupExpenseTypeListener();
-        checkMonthReset();
-    }
-    
-    if (document.getElementById('admin-portal')) {
-        // New admin portal with tabs
-        openTab('all-transactions');
-        loadExpenses();
-        setupPdfModal();
-    }
-});
-
-// Add to your JavaScript
+// Mobile sidebar toggle
 function toggleSidebar() {
-    document.querySelector('.sidebar').classList.toggle('active');
-  }
-  
-  // Add hamburger button to your HTML (near top of body)
-  <button class="hamburger-btn" onclick="toggleSidebar()">☰</button>
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) {
+        sidebar.classList.toggle('active');
+    }
+}
 
-// Expense Tracking System
-let expenses = JSON.parse(localStorage.getItem('expenses')) || [];
+// PDF Generation Functions - Final Working Version
+let jsPDF; // Global reference to jsPDF library
+
+// Initialize PDF functionality
+function initializePDF() {
+    return new Promise((resolve, reject) => {
+        // Check if jsPDF is already loaded
+        if (typeof window.jspdf !== 'undefined' && window.jspdf.jsPDF) {
+            jsPDF = window.jspdf.jsPDF;
+            console.log("jsPDF initialized from jspdf namespace");
+            resolve();
+            return;
+        }
+        
+        if (typeof window.jsPDF !== 'undefined') {
+            jsPDF = window.jsPDF;
+            console.log("jsPDF already available");
+            resolve();
+            return;
+        }
+
+        // Load the library dynamically
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        script.onload = () => {
+            try {
+                jsPDF = window.jspdf.jsPDF;
+                console.log("jsPDF loaded successfully");
+                resolve();
+            } catch (e) {
+                console.error("jsPDF initialization failed:", e);
+                reject(new Error("Failed to initialize PDF library"));
+            }
+        };
+        script.onerror = () => {
+            reject(new Error("Failed to load PDF library script"));
+        };
+        document.head.appendChild(script);
+    });
+}
+
+// Generate PDF for personal transactions
+async function generatePersonalPDF() {
+    try {
+        await initializePDF();
+        const personalExpenses = expenses.filter(e => e.type === 'personal');
+        await generateTransactionPDF(personalExpenses, "Personal Transactions Report");
+    } catch (error) {
+        console.error("Personal PDF Error:", error);
+        alert(`Failed to generate Personal PDF: ${error.message}`);
+    }
+}
+
+// Generate PDF for business transactions
+async function generateBusinessPDF() {
+    try {
+        await initializePDF();
+        const businessExpenses = expenses.filter(e => e.type === 'business');
+        await generateTransactionPDF(businessExpenses, "Business Transactions Report");
+    } catch (error) {
+        console.error("Business PDF Error:", error);
+        alert(`Failed to generate Business PDF: ${error.message}`);
+    }
+}
+
+// Generate PDF for loan transactions
+async function generateLoanPDF() {
+    try {
+        await initializePDF();
+        const loanExpenses = expenses.filter(e => e.type === 'loan');
+        await generateTransactionPDF(loanExpenses, "Loan Transactions Report", true);
+    } catch (error) {
+        console.error("Loan PDF Error:", error);
+        alert(`Failed to generate Loan PDF: ${error.message}`);
+    }
+}
+
+// Core PDF generation function
+async function generateTransactionPDF(transactions, title, isLoan = false) {
+    if (!transactions || transactions.length === 0) {
+        throw new Error("No transactions found");
+    }
+
+    // Create PDF document
+    const doc = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm'
+    });
+
+    // Add title
+    doc.setFontSize(18);
+    doc.setTextColor(40, 40, 40);
+    doc.text(title, doc.internal.pageSize.width / 2, 15, { align: 'center' });
+
+    // Calculate totals
+    const totals = {
+        credit: transactions.filter(e => e.transaction === 'credit')
+                     .reduce((sum, e) => sum + e.amount, 0),
+        debit: transactions.filter(e => e.transaction === 'debit')
+                    .reduce((sum, e) => sum + e.amount, 0)
+    };
+    totals.balance = totals.credit - totals.debit;
+
+    // Add summary section
+    doc.setFontSize(12);
+    doc.text('Summary', 15, 25);
+    doc.setFontSize(10);
+    doc.text(`Total Credit: ₹${totals.credit.toFixed(2)}`, 15, 30);
+    doc.text(`Total Debit: ₹${totals.debit.toFixed(2)}`, 15, 35);
+    doc.text(`Net Balance: ₹${totals.balance.toFixed(2)}`, 15, 40);
+
+    // Prepare table data
+    const headers = isLoan ? 
+        ['Date', 'Loan Type', 'Payment Mode', 'Description', 'Amount (₹)', 'Transaction', 'Due Date'] :
+        ['Date', 'Category', 'Payment Mode', 'Description', 'Amount (₹)', 'Transaction'];
+
+    const body = transactions.map(exp => {
+        const baseRow = [
+            exp.date || 'N/A',
+            exp.category || 'N/A',
+            exp.paymentMode || 'Cash',
+            exp.description || 'No description',
+            { 
+                content: exp.amount.toFixed(2), 
+                styles: { halign: 'right' } 
+            },
+            { 
+                content: exp.transaction.charAt(0).toUpperCase() + exp.transaction.slice(1),
+                styles: { 
+                    textColor: exp.transaction === 'credit' ? [40, 167, 69] : [220, 53, 69],
+                    fontStyle: 'bold'
+                }
+            }
+        ];
+        
+        if (isLoan) {
+            baseRow.push(exp.dueDate || 'N/A');
+        }
+        
+        return baseRow;
+    });
+
+    // Generate table
+    doc.autoTable({
+        startY: 50,
+        head: [headers],
+        body: body,
+        styles: {
+            fontSize: 9,
+            cellPadding: 4,
+            valign: 'middle'
+        },
+        headStyles: {
+            fillColor: [67, 97, 238],
+            textColor: 255,
+            fontStyle: 'bold'
+        },
+        columnStyles: {
+            0: { cellWidth: 20 },  // Date
+            1: { cellWidth: isLoan ? 20 : 25 },  // Category/Loan Type
+            2: { cellWidth: 25 },  // Payment Mode
+            3: { cellWidth: 50 },  // Description
+            4: { cellWidth: 20 },  // Amount
+            5: { cellWidth: 25 },  // Transaction
+            ...(isLoan && { 6: { cellWidth: 25 }})  // Due Date (if loan)
+        },
+        didDrawPage: function(data) {
+            // Footer
+            doc.setFontSize(8);
+            doc.setTextColor(150);
+            doc.text(`Generated on ${new Date().toLocaleDateString()}`, 
+                data.settings.margin.left, 
+                doc.internal.pageSize.height - 10);
+            doc.text(`Page ${data.pageNumber} of ${data.pageCount}`, 
+                doc.internal.pageSize.width - 20,
+                doc.internal.pageSize.height - 10,
+                { align: 'right' });
+        }
+    });
+
+    // Save the PDF
+    doc.save(`${title.replace(/ /g, '_')}.pdf`);
+    
+    // Close modal if open
+    const pdfModal = document.getElementById('pdfModal');
+    if (pdfModal) pdfModal.style.display = 'none';
+}
+
+// Initialize PDF library when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    initializePDF().catch(error => {
+        console.error("PDF initialization error:", error);
+    });
+});
