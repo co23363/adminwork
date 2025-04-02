@@ -16,6 +16,24 @@ document.addEventListener('DOMContentLoaded', function() {
     if (document.getElementById('admin-portal')) {
         openTab('all-transactions');
     }
+    document.addEventListener('click', function(e) {
+        const sidebar = document.querySelector('.sidebar');
+        const hamburger = document.querySelector('.hamburger');
+        
+        if (sidebar.classList.contains('active') && 
+            !e.target.closest('.sidebar') && 
+            !e.target.closest('.hamburger')) {
+            toggleSidebar();
+        }
+    });
+    
+    // Handle window resize
+    window.addEventListener('resize', function() {
+        const sidebar = document.querySelector('.sidebar');
+        if (window.innerWidth > 768 && sidebar.classList.contains('active')) {
+            toggleSidebar();
+        }
+    });
 });
 
 // Set up Add Expense button
@@ -688,12 +706,48 @@ function resetLoanForm() {
     if (descInput) descInput.focus();
 }
 
-// Mobile sidebar toggle
+
+// Mobile sidebar toggle - Updated version
 function toggleSidebar() {
     const sidebar = document.querySelector('.sidebar');
-    if (sidebar) {
-        sidebar.classList.toggle('active');
+    const hamburger = document.querySelector('.hamburger');
+    
+    if (!sidebar || !hamburger) {
+        console.error("Sidebar or hamburger element not found");
+        return;
     }
+
+    sidebar.classList.toggle('active');
+    
+    // Animate hamburger icon
+    hamburger.classList.toggle('open');
+    
+    // Prevent scrolling when sidebar is open
+    document.body.style.overflow = sidebar.classList.contains('active') ? 'hidden' : '';
+}
+
+// Update tab function to work with mobile
+function openTab(tabId) {
+    // Close sidebar on mobile after selecting tab
+    if (window.innerWidth <= 768) {
+        toggleSidebar();
+    }
+    
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active-tab');
+    });
+    
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    const tabContent = document.getElementById(tabId);
+    const tabButton = document.querySelector(`.tab-btn[onclick="openTab('${tabId}')"]`);
+    
+    if (tabContent) tabContent.classList.add('active-tab');
+    if (tabButton) tabButton.classList.add('active');
+    
+    updateTabData(tabId);
 }
 
 // PDF Generation Functions - Final Working Version
