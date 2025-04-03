@@ -1,5 +1,68 @@
+const style = document.createElement('style');
+style.textContent = `
+  .edit-btn {
+    background: none;
+    color: #4a6fa5;
+    border: none;
+    padding: 5px;
+    cursor: pointer;
+    font-size: 16px;
+  }
+  .edit-btn:hover {
+    color: #3a5a80;
+  }
+  .action-buttons {
+    display: flex;
+    gap: 5px;
+  }
+    .edit-modal {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    width: 80%;
+    max-width: 500px;
+}
+
+.edit-modal label {
+    display: block;
+    margin-bottom: 10px;
+}
+
+.edit-modal input, .edit-modal select {
+    width: 100%;
+    padding: 8px;
+    margin-top: 5px;
+    box-sizing: border-box;
+}
+
+.edit-buttons {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+}
+
+.edit-buttons button {
+    padding: 8px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.edit-buttons button:first-child {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.edit-buttons button:last-child {
+    background-color: #f44336;
+    color: white;
+}
+`;
+document.head.appendChild(style);
+
 // Expense Tracking System
 let expenses = JSON.parse(localStorage.getItem('expenses')) || [];
+
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
@@ -195,6 +258,7 @@ function calculateCategoryTotal(expenses) {
 }
 
 // Display expenses in table
+// Display expenses in table with edit functionality
 function displaySearchResults(results, tableId = 'expense-table') {
     const table = document.getElementById(tableId);
     if (!table) {
@@ -239,9 +303,14 @@ function displaySearchResults(results, tableId = 'expense-table') {
                 <td data-label="Transaction">${expense.transaction.charAt(0).toUpperCase() + expense.transaction.slice(1)}</td>
                 <td data-label="Due Date">${expense.dueDate || 'N/A'}</td>
                 <td data-label="Actions">
-                    <button class="delete-btn" onclick="deleteExpense(${expense.id})">
-                        <i class="fas fa-trash"></i> Delete
-                    </button>
+                    <div class="action-buttons">
+                        <button class="edit-btn" onclick="editExpense(${expense.id})">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button class="delete-btn" onclick="deleteExpense(${expense.id})">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </div>
                 </td>
             `;
         } else if (tableId === 'all-transactions-table') {
@@ -254,9 +323,14 @@ function displaySearchResults(results, tableId = 'expense-table') {
                 <td data-label="Amount" class="${amountClass}">${amountSign}₹${expense.amount.toFixed(2)}</td>
                 <td data-label="Transaction">${expense.transaction.charAt(0).toUpperCase() + expense.transaction.slice(1)}</td>
                 <td data-label="Actions">
-                    <button class="delete-btn" onclick="deleteExpense(${expense.id})">
-                        <i class="fas fa-trash"></i> Delete
-                    </button>
+                    <div class="action-buttons">
+                        <button class="edit-btn" onclick="editExpense(${expense.id})">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button class="delete-btn" onclick="deleteExpense(${expense.id})">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </div>
                 </td>
             `;
         } else {
@@ -269,9 +343,14 @@ function displaySearchResults(results, tableId = 'expense-table') {
                 <td data-label="Amount" class="${amountClass}">${amountSign}₹${expense.amount.toFixed(2)}</td>
                 <td data-label="Transaction">${expense.transaction.charAt(0).toUpperCase() + expense.transaction.slice(1)}</td>
                 <td data-label="Actions">
-                    <button class="delete-btn" onclick="deleteExpense(${expense.id})">
-                        <i class="fas fa-trash"></i> Delete
-                    </button>
+                    <div class="action-buttons">
+                        <button class="edit-btn" onclick="editExpense(${expense.id})">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button class="delete-btn" onclick="deleteExpense(${expense.id})">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </div>
                 </td>
             `;
         }
@@ -708,6 +787,7 @@ function resetLoanForm() {
 
 
 // Mobile sidebar toggle - Updated version
+// Replace the existing toggleSidebar function with this:
 function toggleSidebar() {
     const sidebar = document.querySelector('.sidebar');
     const hamburger = document.querySelector('.hamburger');
@@ -718,13 +798,42 @@ function toggleSidebar() {
     }
 
     sidebar.classList.toggle('active');
-    
-    // Animate hamburger icon
     hamburger.classList.toggle('open');
     
     // Prevent scrolling when sidebar is open
     document.body.style.overflow = sidebar.classList.contains('active') ? 'hidden' : '';
 }
+
+// Make sure this event listener exists in your DOMContentLoaded:
+document.addEventListener('DOMContentLoaded', function() {
+    // ... other initialization code ...
+    
+    // Hamburger menu click handler
+    const hamburger = document.querySelector('.hamburger');
+    if (hamburger) {
+        hamburger.addEventListener('click', toggleSidebar);
+    }
+    
+    // Close sidebar when clicking outside
+    document.addEventListener('click', function(e) {
+        const sidebar = document.querySelector('.sidebar');
+        const hamburger = document.querySelector('.hamburger');
+        
+        if (sidebar.classList.contains('active') && 
+            !e.target.closest('.sidebar') && 
+            !e.target.closest('.hamburger')) {
+            toggleSidebar();
+        }
+    });
+    
+    // Handle window resize
+    window.addEventListener('resize', function() {
+        const sidebar = document.querySelector('.sidebar');
+        if (window.innerWidth > 768 && sidebar.classList.contains('active')) {
+            toggleSidebar();
+        }
+    });
+});
 
 // Update tab function to work with mobile
 function openTab(tabId) {
@@ -944,3 +1053,404 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error("PDF initialization error:", error);
     });
 });
+
+function searchAllTransactions() {
+    const searchTerm = document.getElementById('all-transactions-search').value.toLowerCase();
+    const table = document.getElementById('all-transactions-table');
+    const rows = table.getElementsByTagName('tr');
+    
+    for (let i = 1; i < rows.length; i++) { // Skip header row
+      const descriptionCell = rows[i].cells[4]; // Description is in 5th column (0-indexed)
+      if (descriptionCell) {
+        const descriptionText = descriptionCell.textContent || descriptionCell.innerText;
+        if (descriptionText.toLowerCase().indexOf(searchTerm) > -1) {
+          rows[i].style.display = '';
+        } else {
+          rows[i].style.display = 'none';
+        }
+      }
+    }
+}
+
+function clearSearch() {
+    document.getElementById('all-transactions-search').value = '';
+    searchAllTransactions();
+}
+
+// Modify your createAllTransactionsRow function to make cells editable
+function createAllTransactionsRow(table, transaction) {
+    const row = table.insertRow(-1);
+    
+    // Date cell
+    const dateCell = row.insertCell(0);
+    dateCell.textContent = transaction.date || '-';
+    
+    // Type cell
+    const typeCell = row.insertCell(1);
+    typeCell.textContent = transaction.transactionType === 'credit' ? 'Credit' : 'Debit';
+    
+    // Payment Mode cell
+    const paymentModeCell = row.insertCell(2);
+    paymentModeCell.textContent = transaction.paymentMode || '-';
+    
+    // Category cell
+    const categoryCell = row.insertCell(3);
+    categoryCell.textContent = transaction.category ? 
+        transaction.category.charAt(0).toUpperCase() + transaction.category.slice(1) : 
+        '-';
+    
+    // Description cell
+    const descCell = row.insertCell(4);
+    descCell.textContent = transaction.description || '-';
+    
+    // Amount cell
+    const amountCell = row.insertCell(5);
+    amountCell.textContent = '₹' + transaction.amount.toFixed(2);
+    amountCell.className = transaction.transactionType === 'credit' ? 
+        'credit-amount' : 'debit-amount';
+    
+    // Transaction Type cell
+    const transTypeCell = row.insertCell(6);
+    transTypeCell.textContent = transaction.transactionType === 'credit' ? 
+        'Income' : 'Expense';
+    
+    // Actions cell with edit and delete buttons
+    const actionsCell = row.insertCell(7);
+    actionsCell.className = 'action-buttons';
+    
+    // Add edit button with pencil icon
+    const editBtn = document.createElement('button');
+    editBtn.className = 'edit-btn';
+    editBtn.innerHTML = '<i class="fas fa-edit"></i>';
+    editBtn.onclick = (e) => {
+        e.stopPropagation();
+        editTransaction(transaction);
+    };
+    
+    // Keep existing delete button
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'delete-btn';
+    deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+    deleteBtn.onclick = (e) => {
+        e.stopPropagation();
+        if (confirm('Are you sure you want to delete this transaction?')) {
+            deleteTransaction(transaction.id);
+        }
+    };
+    
+    actionsCell.appendChild(editBtn);
+    actionsCell.appendChild(deleteBtn);
+}
+
+function editTransaction(transaction) {
+    const newDescription = prompt("Edit description:", transaction.description);
+    if (newDescription === null) return;
+    
+    const newAmount = parseFloat(prompt("Edit amount:", transaction.amount));
+    if (isNaN(newAmount)) return;
+    
+    const newCategory = prompt("Edit category:", transaction.category);
+    if (newCategory === null) return;
+    
+    const newPaymentMode = prompt("Edit payment mode:", transaction.paymentMode);
+    if (newPaymentMode === null) return;
+    
+    // Update the transaction
+    transaction.description = newDescription;
+    transaction.amount = newAmount;
+    transaction.category = newCategory;
+    transaction.paymentMode = newPaymentMode;
+    
+    // Save to localStorage
+    saveExpenses();
+    
+    // Refresh the view
+    loadAllTransactions();
+    updateSummaryCards();
+}
+
+// Helper function for editing text/number cells
+function editCell(cell, property, transaction, inputType = 'text') {
+  if (cell.querySelector('input')) return; // Already in edit mode
+
+  const originalValue = transaction[property] || '';
+  const input = document.createElement('input');
+  input.type = inputType;
+  input.className = 'edit-input';
+  input.value = inputType === 'date' ? originalValue.split('T')[0] : originalValue;
+  
+  const saveBtn = document.createElement('button');
+  saveBtn.className = 'save-btn';
+  saveBtn.textContent = '✓';
+  
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'cancel-btn';
+  cancelBtn.textContent = '✕';
+
+  cell.innerHTML = '';
+  cell.appendChild(input);
+  cell.appendChild(saveBtn);
+  cell.appendChild(cancelBtn);
+  input.focus();
+
+  const saveEdit = () => {
+    let newValue = input.value;
+    if (inputType === 'number') newValue = parseFloat(newValue);
+    if (inputType === 'date') newValue = new Date(newValue).toISOString();
+    
+    if (newValue !== originalValue) {
+      transaction[property] = newValue;
+      saveTransactions();
+      loadAllTransactions(); // Refresh the view
+      updateSummaryCards();
+    } else {
+      cell.textContent = inputType === 'date' ? originalValue.split('T')[0] : originalValue;
+      cell.className = 'editable';
+      cell.onclick = () => editCell(cell, property, transaction, inputType);
+    }
+  };
+
+  const cancelEdit = () => {
+    cell.textContent = inputType === 'date' ? originalValue.split('T')[0] : originalValue;
+    cell.className = 'editable';
+    cell.onclick = () => editCell(cell, property, transaction, inputType);
+  };
+
+  input.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') saveEdit();
+    if (e.key === 'Escape') cancelEdit();
+  });
+
+  saveBtn.addEventListener('click', saveEdit);
+  cancelBtn.addEventListener('click', cancelEdit);
+}
+
+// Special function for editing transaction type
+function editTypeCell(cell, transaction) {
+  if (cell.querySelector('select')) return;
+
+  const originalValue = transaction.transactionType;
+  const select = document.createElement('select');
+  select.className = 'edit-input';
+  
+  const optionCredit = document.createElement('option');
+  optionCredit.value = 'credit';
+  optionCredit.textContent = 'Credit';
+  if (originalValue === 'credit') optionCredit.selected = true;
+  
+  const optionDebit = document.createElement('option');
+  optionDebit.value = 'debit';
+  optionDebit.textContent = 'Debit';
+  if (originalValue === 'debit') optionDebit.selected = true;
+  
+  select.appendChild(optionCredit);
+  select.appendChild(optionDebit);
+
+  const saveBtn = document.createElement('button');
+  saveBtn.className = 'save-btn';
+  saveBtn.textContent = '✓';
+  
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'cancel-btn';
+  cancelBtn.textContent = '✕';
+
+  cell.innerHTML = '';
+  cell.appendChild(select);
+  cell.appendChild(saveBtn);
+  cell.appendChild(cancelBtn);
+  select.focus();
+
+  const saveEdit = () => {
+    if (select.value !== originalValue) {
+      transaction.transactionType = select.value;
+      saveTransactions();
+      loadAllTransactions(); // Refresh the view
+      updateSummaryCards();
+    } else {
+      cell.textContent = originalValue === 'credit' ? 'Credit' : 'Debit';
+      cell.className = 'editable';
+      cell.onclick = () => editTypeCell(cell, transaction);
+    }
+  };
+
+  const cancelEdit = () => {
+    cell.textContent = originalValue === 'credit' ? 'Credit' : 'Debit';
+    cell.className = 'editable';
+    cell.onclick = () => editTypeCell(cell, transaction);
+  };
+
+  select.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') saveEdit();
+    if (e.key === 'Escape') cancelEdit();
+  });
+
+  saveBtn.addEventListener('click', saveEdit);
+  cancelBtn.addEventListener('click', cancelEdit);
+}
+
+// Special function for editing category
+function editCategoryCell(cell, transaction) {
+  if (cell.querySelector('select')) return;
+
+  const originalValue = transaction.category;
+  const select = document.createElement('select');
+  select.className = 'edit-input';
+  
+  // Add all possible categories
+  const categories = [
+    'shopping', 'food', 'transport', 'other',
+    'shop', 'property', 'supplies'
+  ];
+  
+  categories.forEach(category => {
+    const option = document.createElement('option');
+    option.value = category;
+    option.textContent = category.charAt(0).toUpperCase() + category.slice(1);
+    if (category === originalValue) option.selected = true;
+    select.appendChild(option);
+  });
+
+  const saveBtn = document.createElement('button');
+  saveBtn.className = 'save-btn';
+  saveBtn.textContent = '✓';
+  
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'cancel-btn';
+  cancelBtn.textContent = '✕';
+
+  cell.innerHTML = '';
+  cell.appendChild(select);
+  cell.appendChild(saveBtn);
+  cell.appendChild(cancelBtn);
+  select.focus();
+
+  const saveEdit = () => {
+    if (select.value !== originalValue) {
+      transaction.category = select.value;
+      saveTransactions();
+      loadAllTransactions(); // Refresh the view
+      updateSummaryCards();
+    } else {
+      cell.textContent = originalValue ? 
+        originalValue.charAt(0).toUpperCase() + originalValue.slice(1) : '-';
+      cell.className = 'editable';
+      cell.onclick = () => editCategoryCell(cell, transaction);
+    }
+  };
+
+  const cancelEdit = () => {
+    cell.textContent = originalValue ? 
+      originalValue.charAt(0).toUpperCase() + originalValue.slice(1) : '-';
+    cell.className = 'editable';
+    cell.onclick = () => editCategoryCell(cell, transaction);
+  };
+
+  select.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') saveEdit();
+    if (e.key === 'Escape') cancelEdit();
+  });
+
+  saveBtn.addEventListener('click', saveEdit);
+  cancelBtn.addEventListener('click', cancelEdit);
+}
+
+// Update your loadAllTransactions function to use the new row creation
+function loadAllTransactions() {
+    const table = document.getElementById('all-transactions-table').getElementsByTagName('tbody')[0];
+    table.innerHTML = '';
+    
+    // Make sure you're using the correct transactions array
+    const transactionsToDisplay = expenses; // or allTransactions if you have that variable
+    
+    transactionsToDisplay.forEach(transaction => {
+      createAllTransactionsRow(table, transaction);
+    });
+}
+
+function editExpense(id) {
+    const expense = expenses.find(e => e.id === id);
+    if (!expense) {
+        alert("Expense not found!");
+        return;
+    }
+
+    // Create a modal or form for editing
+    const editForm = `
+        <div class="edit-modal">
+            <h3>Edit Transaction</h3>
+            <label>Description: <input type="text" id="edit-description" value="${expense.description}"></label>
+            <label>Amount: <input type="number" step="0.01" id="edit-amount" value="${expense.amount}"></label>
+            <label>Category: 
+                <select id="edit-category">
+                    <option value="shopping" ${expense.category === 'shopping' ? 'selected' : ''}>Shopping</option>
+                    <option value="food" ${expense.category === 'food' ? 'selected' : ''}>Food</option>
+                    <option value="transport" ${expense.category === 'transport' ? 'selected' : ''}>Transport</option>
+                    <option value="other" ${expense.category === 'other' ? 'selected' : ''}>Other</option>
+                </select>
+            </label>
+            <label>Payment Mode: 
+                <select id="edit-payment-mode">
+                    <option value="Cash" ${expense.paymentMode === 'Cash' ? 'selected' : ''}>Cash</option>
+                    <option value="Card" ${expense.paymentMode === 'Card' ? 'selected' : ''}>Card</option>
+                    <option value="Bank Transfer" ${expense.paymentMode === 'Bank Transfer' ? 'selected' : ''}>Bank Transfer</option>
+                    <option value="UPI" ${expense.paymentMode === 'UPI' ? 'selected' : ''}>UPI</option>
+                </select>
+            </label>
+            <div class="edit-buttons">
+                <button onclick="saveEdit(${expense.id})">Save</button>
+                <button onclick="closeEditModal()">Cancel</button>
+            </div>
+        </div>
+    `;
+
+    // Create modal container if it doesn't exist
+    let modal = document.getElementById('edit-modal-container');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'edit-modal-container';
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100%';
+        modal.style.height = '100%';
+        modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+        modal.style.display = 'flex';
+        modal.style.justifyContent = 'center';
+        modal.style.alignItems = 'center';
+        modal.style.zIndex = '1000';
+        document.body.appendChild(modal);
+    }
+
+    modal.innerHTML = editForm;
+}
+
+function saveEdit(id) {
+    const expense = expenses.find(e => e.id === id);
+    if (!expense) return;
+
+    const description = document.getElementById('edit-description').value;
+    const amount = parseFloat(document.getElementById('edit-amount').value);
+    const category = document.getElementById('edit-category').value;
+    const paymentMode = document.getElementById('edit-payment-mode').value;
+
+    if (!description || isNaN(amount)) {
+        alert("Please enter valid description and amount!");
+        return;
+    }
+
+    expense.description = description;
+    expense.amount = amount;
+    expense.category = category;
+    expense.paymentMode = paymentMode;
+
+    saveExpenses();
+    updateDashboard();
+    closeEditModal();
+}
+
+function closeEditModal() {
+    const modal = document.getElementById('edit-modal-container');
+    if (modal) {
+        modal.remove();
+    }
+}
