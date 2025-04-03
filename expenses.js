@@ -791,35 +791,37 @@ function resetLoanForm() {
 function toggleSidebar() {
     const sidebar = document.querySelector('.sidebar');
     const hamburger = document.querySelector('.hamburger');
+    const overlay = document.querySelector('.sidebar-overlay');
     
-    if (!sidebar || !hamburger) {
-        console.error("Sidebar or hamburger element not found");
-        return;
-    }
-
     sidebar.classList.toggle('active');
-    hamburger.classList.toggle('open');
     
-    // Prevent scrolling when sidebar is open
-    document.body.style.overflow = sidebar.classList.contains('active') ? 'hidden' : '';
+    if (sidebar.classList.contains('active')) {
+        overlay.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+    } else {
+        overlay.style.display = 'none';
+        document.body.style.overflow = '';
+    }
 }
 
-// Make sure this event listener exists in your DOMContentLoaded:
+// In your DOMContentLoaded event:
 document.addEventListener('DOMContentLoaded', function() {
     // ... other initialization code ...
     
-    // Hamburger menu click handler
-    const hamburger = document.querySelector('.hamburger');
-    if (hamburger) {
-        hamburger.addEventListener('click', toggleSidebar);
+    // Initialize sidebar state
+    const sidebar = document.querySelector('.sidebar');
+    if (window.innerWidth > 768) {
+        sidebar.classList.add('active');
     }
+
+    // Hamburger click handler
+    document.querySelector('.hamburger').addEventListener('click', toggleSidebar);
     
-    // Close sidebar when clicking outside
+    // Close sidebar when clicking outside or on a tab
     document.addEventListener('click', function(e) {
         const sidebar = document.querySelector('.sidebar');
-        const hamburger = document.querySelector('.hamburger');
-        
-        if (sidebar.classList.contains('active') && 
+        if (window.innerWidth <= 768 && 
+            sidebar.classList.contains('active') && 
             !e.target.closest('.sidebar') && 
             !e.target.closest('.hamburger')) {
             toggleSidebar();
@@ -829,11 +831,25 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle window resize
     window.addEventListener('resize', function() {
         const sidebar = document.querySelector('.sidebar');
-        if (window.innerWidth > 768 && sidebar.classList.contains('active')) {
-            toggleSidebar();
+        if (window.innerWidth > 768) {
+            sidebar.classList.add('active');
+        } else {
+            sidebar.classList.remove('active');
+            document.querySelector('.hamburger').classList.remove('open');
+            document.querySelector('.sidebar-overlay').style.display = 'none';
+            document.body.style.overflow = '';
         }
     });
+
+    loadExpenses();
+    setupExpenseTypeListener();
+    checkMonthReset();
+    setupAddExpenseButton();
+    setupPdfModal();
+    
+    openTab('all-transactions');
 });
+
 
 // Update tab function to work with mobile
 function openTab(tabId) {
