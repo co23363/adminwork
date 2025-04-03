@@ -570,7 +570,6 @@ tr:hover {
   flex-direction: column;
   z-index: 1000;
   transition: transform 0.3s ease;
-  transform: translateX(-250px);
 }
 
 .sidebar.active {
@@ -645,9 +644,9 @@ tr:hover {
   transition: margin-left 0.3s ease;
 }
 
-@media (min-width: 769px) {
+@media (min-width: 768px) {
   .sidebar {
-      transform: translateX(0);
+      transform: translateX(-100%);
   }
   .main-content {
       margin-left: 250px;
@@ -723,6 +722,7 @@ tr:hover {
   height: 40px;
   font-size: 1.5rem;
   border-radius: 4px;
+  cursor: pointer;
 }
 
 .sidebar-overlay {
@@ -733,7 +733,7 @@ tr:hover {
   right: 0;
   bottom: 0;
   background: rgba(0,0,0,0.5);
-  z-index: 99;
+  z-index: 999;
 }
 
 @media (max-width: 768px) {
@@ -744,11 +744,12 @@ tr:hover {
     height: 100vh;
     left: -250px;
     top: 0;
-    transition: 0.3s;
+    transition: none;
   }
   
   .sidebar.active {
     left: 0;
+    transform: translateX(0);
   }
   
   .hamburger {
