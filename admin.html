@@ -5,17 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Expense Tracker Admin</title>
     <link rel="stylesheet" href="styles.css" />
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
   </head>
   <body>
-    <button class="hamburger-btn" onclick="toggleSidebar()">☰</button>
+    <button class="hamburger" onclick="toggleSidebar()">☰</button>
     <div id="admin-portal" class="admin-portal container">
-
       <!-- Sidebar Navigation -->
       <div class="sidebar">
         <div class="sidebar-header">
@@ -72,6 +74,18 @@
           <!-- Transactions Table -->
           <div class="card">
             <h2 class="card-title">Transaction History</h2>
+            <div class="search-container">
+              <input
+                type="text"
+                id="all-transactions-search"
+                class="form-control"
+                placeholder="Search transactions by description..."
+                onkeyup="searchAllTransactions()"
+              />
+              <button class="btn primary-btn" onclick="clearSearch()">
+                <i class="fas fa-times"></i> Clear
+              </button>
+            </div>
             <div class="table-responsive">
               <table id="all-transactions-table" class="styled-table">
                 <thead>
