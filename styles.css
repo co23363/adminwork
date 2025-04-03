@@ -568,6 +568,13 @@ tr:hover {
   padding: 20px 0;
   display: flex;
   flex-direction: column;
+  z-index: 1000;
+  transition: transform 0.3s ease;
+  transform: translateX(-250px);
+}
+
+.sidebar.active {
+  transform: translateX(0);
 }
 
 .sidebar-header {
@@ -584,6 +591,7 @@ tr:hover {
 .sidebar-nav {
   flex: 1;
   overflow-y: auto;
+  padding: 0 10px;
 }
 
 .tab-btn {
@@ -598,6 +606,8 @@ tr:hover {
   align-items: center;
   gap: 10px;
   transition: var(--transition);
+  border-radius: 4px;
+  margin: 5px 0;
 }
 
 .tab-btn i {
@@ -619,17 +629,30 @@ tr:hover {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .sidebar-footer .btn {
   width: 100%;
+  margin: 0;
 }
 
 /* Main Content */
 .main-content {
-  margin-left: 250px;
+  margin-left: 0;
+  width: 100%;
   padding: 20px;
-  width: calc(100% - 250px);
+  transition: margin-left 0.3s ease;
+}
+
+@media (min-width: 769px) {
+  .sidebar {
+      transform: translateX(0);
+  }
+  .main-content {
+      margin-left: 250px;
+      width: calc(100% - 250px);
+  }
 }
 
 /* Tab Content */
@@ -687,7 +710,7 @@ tr:hover {
 }
 
 /* Mobile Sidebar Styles */
-.hamburger-btn {
+.hamburger {
   display: none; /* Hidden by default */
   position: fixed;
   left: 15px;
@@ -728,7 +751,7 @@ tr:hover {
     left: 0;
   }
   
-  .hamburger-btn {
+  .hamburger {
     display: block;
   }
   
@@ -755,3 +778,94 @@ tr:hover {
   transform: rotate(45deg) translate(-5px, -6px);
 }
 
+/* Add to your styles.css */
+.search-container {
+  margin-bottom: 20px;
+  display: flex;
+  gap: 10px;
+}
+
+.edit-btn {
+  background: none;
+  color: var(--primary);
+  border: 1px solid var(--primary);
+  padding: 5px 10px;
+  border-radius: 4px;
+  transition: all 0.2s;
+  margin-left: 5px;
+}
+
+.edit-btn:hover {
+  background: var(--primary);
+  color: white;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 5px;
+}
+
+/* Modal Styles */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.4);
+}
+
+.modal-content {
+  background-color: #fefefe;
+  margin: 15% auto;
+  padding: 20px;
+  border: 1px solid #888;
+  width: 80%;
+  max-width: 500px;
+  border-radius: 5px;
+}
+
+.close {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.close:hover {
+  color: black;
+  cursor: pointer;
+}
+
+/* Edit Button Styles */
+.edit-btn {
+  background-color: #4a6fa5;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  margin-left: 5px;
+}
+
+.edit-btn:hover {
+  background-color: #3a5a80;
+}
+
+.credit-amount {
+  color: var(--success);
+  font-weight: 600;
+}
+
+.debit-amount {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 5px;
+  justify-content: center;
+}
